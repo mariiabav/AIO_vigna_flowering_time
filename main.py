@@ -1,6 +1,7 @@
 import h5py
-import numpy as np
 from PIL import Image
+import numpy as np
+from cnn import train
 
 
 def convert_weather_value_to_px(left_border, value):
@@ -55,11 +56,13 @@ def get_vigna_information(filename):
             plant_groups.remove(key)
 
         vigna_info = []
+        # ['doy', 'geo_id', 'gr_covar', 'response_R1', 'species', 'year']
         for group in plant_groups:
             tmp = []
             for dset in f[group]:
                 if group == 'species':
                     tmp.append(dset.decode('UTF-8'))
+                    #tmp.append(dset)
                 elif group == 'gr_covar':
                     tmp.append(dset)
                 else:
@@ -73,15 +76,13 @@ def get_vigna_information(filename):
         return summer_plants, winter_plants
 
 
-if __name__ == '__main__':
-    filename_vigna = "/Users/mariia/Desktop/data/vigna-2021-v4-vqtl-all-utf-v2.h5"
-    filename_weather = "/Users/mariia/Desktop/data/vigna-weather.h5"
-
+def aio_transform(filename_vigna, filename_weather):
     weather = get_weather_information(filename_weather)
     summer_planted_vigna, winter_planted_vigna = get_vigna_information(filename_vigna)
 
-    flag = 0
-    for plant in summer_planted_vigna:
+    all_vigna = summer_planted_vigna + winter_planted_vigna
+    #for plant in summer_planted_vigna:
+    for plant in all_vigna:
         pixels = []
         snp_pixels = []
         for snp in plant[2]:
@@ -89,19 +90,24 @@ if __name__ == '__main__':
         pixels.append(snp_pixels[:5])
         pixels.append(snp_pixels[5:10:])
         pixels.append(snp_pixels[10:])
+
         for day in weather:
             if (day[-1] == plant[-1]) and (day[2] == plant[1]) and (plant[0] <= day[1] < plant[0] + 20):
                 day_pixels = []
                 for i in range(3, 8):
                     day_pixels.append(convert_weather_value_to_px(0, day[i]))
                 pixels.append(day_pixels)
-
         pixels = np.array(pixels, dtype=np.uint8)
         new_image = Image.fromarray(pixels, mode="RGB")
-        flag = flag + 1
-        #new_image.save('AIO/' + str(flag) + '.png')
-        new_image.save('AIO/' + str(plant[4]) + '.png')
+        new_image.save('AIO_all/' + str(plant[4]) + '_' + str(plant[1]) + '_' + str(plant[3]) + '.png')
 
 
+if __name__ == '__main__':
 
+    f_vigna = "/Users/mariia/Desktop/data/vigna-2021-v4-vqtl-all-utf-v2.h5"
+    #f_vigna = "/Users/mariia/Desktop/data/vigna-2021-v4-vqtl-tr-val-utf.h5"
+    f_weather = "/Users/mariia/Desktop/data/vigna-weather.h5"
+
+    aio_transform(f_vigna, f_weather)
+    train()
 
